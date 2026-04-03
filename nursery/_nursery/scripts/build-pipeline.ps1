@@ -19,7 +19,11 @@ foreach ($env in $environments) {
     
     $branchExists = git branch --list $env
     if (-not $branchExists) {
-        git branch $env | Out-Null
+        if ($env -ne "core-stable") {
+            git branch $env core-stable | Out-Null
+        } else {
+            git branch $env | Out-Null
+        }
     }
     
     if (-not (Test-Path $env)) {
