@@ -47,14 +47,14 @@ if (-not (Test-Path $targetDir)) {
 $destination = Join-Path $targetDir $seed.Name
 Move-Item -Path $seed.FullName -Destination $destination -Force
 
-# 7. Copy Nursery Blueprint
-$blueprintDir = Join-Path $PSScriptRoot "blueprint"
-if (Test-Path $blueprintDir) {
-    Copy-Item -Path "$blueprintDir\*" -Destination $targetDir -Recurse -Force
+# 7. Copy Nursery Package as `_nursery`
+$nurseryBaseDir = Join-Path $PSScriptRoot "_nursery"
+if (Test-Path $nurseryBaseDir) {
+    Copy-Item -Path $nurseryBaseDir -Destination $targetDir -Recurse -Force
 }
 
 # 8. Run initialization logic
-$initScript = Join-Path $targetDir "init.ps1"
+$initScript = Join-Path $targetDir "_nursery\init.ps1"
 if (Test-Path $initScript) {
     Write-Host "Running initialization script..." -ForegroundColor Cyan
     Push-Location $targetDir

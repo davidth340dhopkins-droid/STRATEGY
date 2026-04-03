@@ -1,3 +1,5 @@
-# add-worktree.ps1
-# TODO: Implement adding a feature worktree
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$Name
+)
 Write-Host "Feature Worktree Add Script - Coming Soon" -ForegroundColor Yellow

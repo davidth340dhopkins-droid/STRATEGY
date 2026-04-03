@@ -1,58 +1,70 @@
-# Strategy Garden: Sprout Pipeline Architecture
+# Strategy Garden Pipeline
 
-The Strategy Garden implements a standardized, robust DevOps pipeline for every "sprout" (a managed project). Instead of relying on a single codebase where different tests and features conflict, the Garden uses **Git Worktrees** and **Dynamic Port Allocation** to run physically isolated environments simultaneously.
+This document explains the architecture of the fully isolated 
+pipeline configuration for the Strategy Garden, which builds on
+the concept of Git Worktrees to map environments to isolated,
+self-managing subdirectories.
 
-## Core Concepts
+## **Environments (Worktrees)**
 
-When a sprout is initialized, its root directory acts strictly as an orchestration container. The actual code resides in sub-directories representing isolated Git branches (worktrees). 
+A "sprout" project acts as a single Git repository container. 
+Within it, environments use isolated worktree directories.
 
-There are two types of pipelines: **Core** and **Feature**.
+### **The Core Pipeline**
 
-### 1. The Core Pipeline
-The Core pipeline represents the trunk of your project. It is perpetually maintained across 4 permanent environments:
+The basic continuous deployment system is the Core Pipeline.
+It maintains four subdirectories and branches:
 
-- **Stable (`core-stable`):** The baseline, production-ready code.
-- **Human Testing (`core-b-test`):** The staging area where humans perform manual QA.
-- **Agent Testing (`core-a-test`):** The automated sandbox where AI agents verify code functionality via smoke tests.
-- **Merge (`core-merge`):** The integration development branch. When features are finished, they merge here first to resolve conflicts against the main codebase.
+- **Stable (`core-stable`)**: Tested, production-ready code.
+- **Human Testing (`core-b-test`)**: Staging for manual QA.
+- **Agent Testing (`core-a-test`)**: Code awaiting automated QA.
+- **Merge (`core-merge`)**: Active integration development area.
 
-### 2. Feature Pipelines
-To build a new feature or resolve a bug, a new Feature pipeline is spawned. A Feature pipeline draws from a source environment (usually `core-stable`) and creates 3 temporary working environments:
+### **Feature Pipelines**
 
-- **Feature Dev (`feature-NAME-dev`):** Where raw code changes are written.
-- **Feature Agent Testing (`feature-NAME-a-test`):** Where AI agents test the specific feature.
-- **Feature Human Testing (`feature-NAME-b-test`):** Where manual reviewers test the feature.
+When building a new feature or fixing a bug, a new feature 
+branch is created (usually diverging from Stable). It spawns 
+its own three unique temporary worktrees:
 
-*Lifecycle:* Once a feature passes Human Testing, it is promoted into `core-merge` to integrate with the main app. From there, it flows up through `core-a-test`, `core-b-test`, and finally into `core-stable`. Once merged into stable, the feature worktrees are pruned.
+- **Feature Dev (`feature-NAME-dev`)**: Active feature development.
+- **Feature Agent Testing (`feature-NAME-a-test`)**: Automated QA.
+- **Feature Human Testing (`feature-NAME-b-test`)**: Manual QA.
 
-## Server & Dynamic Port Allocation
+Once verified in B-Test, a feature branch is merged into the
+`core-merge` branch (to test its integration with the rest of the
+live codebase). It is then promoted step-by-step through the Core
+environments until resolving in Stable. At that point, the feature 
+worktrees are permanently closed.
 
-Because a single project might run up to 4 (Core) + 3 (Feature) = 7 simultaneous servers, the Garden uses dynamic port allocation to ensure no collisions occur. 
+## **Dynamic Port Allocation**
 
-Ports are assigned following an **`x0yz`** schema:
+When simultaneously running parallel environments, port 
+collisions must be avoided. The Sprout logic automatically maps
+blocks of contiguous ports to environments using an `xxyz`
+schema.
 
-- **`x` (Project Tier):** e.g., `3`, `4`, `5`. If standard ports are taken (e.g. `3000`), the script automatically bumps to `4000` or `5000` to find a free tier.
-- **`y` (Pipeline ID):**
-  - `1` = Core Pipeline
-  - `2` = Feature pipeline A
-  - `3` = Feature pipeline B
-- **`z` (Environment):**
-  - `0` = Stable
-  - `1` = B-Test (Core) OR Dev (Feature)
-  - `2` = A-Test (Core & Feature)
-  - `3` = Merge/Dev (Core) OR B-test (Feature)
+- **`xx` (Project Tier)**: Default is `30`. If entirely occupied,
+  it bumps sequentially to `31`, `32`, etc.
+- **`y` (Pipeline Tier)**: `1` = Core, `2` = Feature A, etc.
+- **`z` (Level)**: `0`=Stable, `1`=B-Test/Dev, `2`=A-Test, `3`=Merge.
 
-### Example Port Mappings (Tier 3000)
+**Example Ports (`xx`=`30`)**:
+- Core Pipeline (`y`=1): `3010`, `3011`, `3012`, `3013`.
+- Feature A (`y`=2): `3021`, `3022`, `3023`.
 
-**Core Pipeline (`y=1` -> `x01z`):**
-- Stable: `3010`
-- B-Test: `3011`
-- A-Test: `3012`
-- Merge: `3013`
+This scheme correctly pairs the first two digits matching 
+throughout the entire project lifecycle, distinguishing the app
+from other concurrent Garden tools.
 
-**Feature "Darkmode" (`y=2` -> `x02z`):**
-- Dev: `3021`
-- A-Test: `3022`
-- B-Test: `3023`
+## **Automatic Collisions Lifecycle**
 
-When you run the setup script, you assign it a run command (e.g., `npm run dev --port {PORT}`). The pipeline automation dynamically scans for the lowest available `x` and `y` tiers, replaces the placeholder, and launches the entire suite of servers perfectly isolated from each other.
+If you re-run the environment boot script, it uses polling 
+mechanisms (`Get-NetTCPConnection` interacting with properties
+of the application `Win32_Process`) to determine if a blocked port 
+is occupied by your app or a foreign app.
+
+If it matches your specific project directory path, the system
+will quickly terminate the old process and cleanly reuse the 
+port. This eliminates "EADDRINUSE" errors during development
+without artificially shifting to a different port tier (which 
+would break local proxy setups and testing workflows).
