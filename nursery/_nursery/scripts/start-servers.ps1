@@ -11,7 +11,7 @@ $runCmdFile = Join-Path $nurseryDir ".runcmd"
 $tierFile = Join-Path $nurseryDir ".porttier"
 
 if (-not (Test-Path $runCmdFile)) {
-    Write-Error "Could not find .runcmd. Please run setup-core.ps1 first."
+    Write-Error "Could not find .runcmd. Please run build-pipeline.ps1 first."
     exit 1
 }
 $runCmdTemplate = Get-Content $runCmdFile -Raw

@@ -30,4 +30,4 @@ foreach ($env in $environments) {
 }
 
 Write-Host "Setup complete. Core environments are ready." -ForegroundColor Green
-Write-Host "Run 'pwsh _nursery/scripts/start-env.ps1' to boot your servers." -ForegroundColor Cyan
+Write-Host "Run 'pwsh _nursery/scripts/start-servers.ps1' to boot your servers." -ForegroundColor Cyan
