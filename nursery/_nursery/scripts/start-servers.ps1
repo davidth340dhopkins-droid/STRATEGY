@@ -102,10 +102,10 @@ Set-Content -Path $tierFile -Value $xx -Encoding UTF8
 Write-Host "Allocated port tier $xx for target '$Target'." -ForegroundColor Cyan
 
 $environments = @(
-    @{ Name = "core-stable"; Port = [int]"${xx}${y}0" },
-    @{ Name = "core-b-test"; Port = [int]"${xx}${y}1" },
-    @{ Name = "core-a-test"; Port = [int]"${xx}${y}2" },
-    @{ Name = "core-merge";  Port = [int]"${xx}${y}3" }
+    @{ Name = "core/stable"; Port = [int]"${xx}${y}0" },
+    @{ Name = "core/b-test"; Port = [int]"${xx}${y}1" },
+    @{ Name = "core/a-test"; Port = [int]"${xx}${y}2" },
+    @{ Name = "core/merge";  Port = [int]"${xx}${y}3" }
 )
 
 foreach ($env in $environments) {
