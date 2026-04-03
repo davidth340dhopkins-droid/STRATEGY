@@ -1,0 +1,17 @@
+# Ignore all directories inside sprouts
+/entities/sprouts/*
+
+# Except for a .gitkeep file if you want to commit the empty sprouts directory itself
+!/entities/sprouts/.gitkeep
+
+# Ignore Node.js modules
+node_modules/
+gardener/dashboard/node_modules/
+
+# Ignore temp folders generated during workflows
+/tmp/
+_bin/
+
+# OS generated files
+.DS_Store
+Thumbs.db
