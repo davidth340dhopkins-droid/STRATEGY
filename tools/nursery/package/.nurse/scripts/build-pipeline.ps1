@@ -14,17 +14,24 @@ $runCmdFile = Join-Path $nurseryDir ".runcmd"
 Set-Content -Path $runCmdFile -Value $RunCommand -Encoding UTF8
 
 # 2. Branch creation and Worktree creation
-$environments = @("core/stable", "core/b-test", "core/a-test", "core/merge")
+$isFeature = $nurseryDir -match "features"
+$environments = if (-not $isFeature) {
+    @("core/stable", "core/b-test", "core/a-test", "core/merge")
+} else {
+    $featureName = Split-Path (Split-Path $nurseryDir -Parent) -Leaf
+    @("features/$featureName/b-test", "features/$featureName/a-test", "features/$featureName/merge")
+}
 
 foreach ($env in $environments) {
     Write-Host "Creating worktree for $env..." -ForegroundColor Gray
     
     $branchExists = git branch --list $env
     if (-not $branchExists) {
-        if ($env -ne "core/stable") {
-            git branch $env core/stable | Out-Null
+        $sourceBranch = if ($isFeature) { "core/merge" } else { "master" }
+        if ($env -match "stable$") {
+             # Core stable is special
         } else {
-            git branch $env | Out-Null
+            git branch $env $sourceBranch | Out-Null
         }
     }
     
@@ -35,7 +42,7 @@ foreach ($env in $environments) {
     }
 }
 
-Write-Host "Setup complete. Core environments are ready." -ForegroundColor Green
+Write-Host "Setup complete. Environments are ready." -ForegroundColor Green
 
 # (Automated Servers Boot)
 if (-not $NoStart) {

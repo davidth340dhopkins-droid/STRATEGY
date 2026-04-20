@@ -24,7 +24,23 @@ if ($Target -ne "core") {
 $y = 1 # Core is pipeline 1
 
 # 2. Tier Discovery & Registry Lock
-$strategyRoot = [System.IO.Path]::GetFullPath("$rootDir\..\..\..")
+$current = $rootDir
+$strategyRoot = $null
+while ($current) {
+    if (Test-Path (Join-Path $current "tools\nursery")) {
+        $strategyRoot = $current
+        break
+    }
+    $parent = Split-Path $current -Parent
+    if ($parent -eq $current) { break }
+    $current = $parent
+}
+
+if ($null -eq $strategyRoot) {
+    Write-Error "Could not find Strategy Root (searching up from $rootDir)"
+    exit 1
+}
+
 $registryFile = Join-Path $strategyRoot "tools\nursery\port_registry.json"
 $registryDir = Split-Path $registryFile -Parent
 if (-not (Test-Path $registryDir)) { New-Item -ItemType Directory -Path $registryDir -Force | Out-Null }
@@ -164,12 +180,20 @@ try {
 Set-Content -Path $tierFile -Value $xx -Encoding UTF8
 Write-Host "Allocated port tier $xx for target '$Target'." -ForegroundColor Cyan
 
-$environments = @(
-    @{ Name = "core/stable"; Port = [int]"${xx}${y}0" },
-    @{ Name = "core/b-test"; Port = [int]"${xx}${y}1" },
-    @{ Name = "core/a-test"; Port = [int]"${xx}${y}2" },
-    @{ Name = "core/merge";  Port = [int]"${xx}${y}3" }
-)
+$isFeature = $nurseryDir -match "features"
+$environments = @()
+
+if (-not $isFeature) {
+    $environments += @{ Name = "core/stable"; Port = [int]"${xx}${y}0" }
+    $environments += @{ Name = "core/b-test"; Port = [int]"${xx}${y}1" }
+    $environments += @{ Name = "core/a-test"; Port = [int]"${xx}${y}2" }
+    $environments += @{ Name = "core/merge";  Port = [int]"${xx}${y}3" }
+} else {
+    $featureName = Split-Path (Split-Path $nurseryDir -Parent) -Leaf
+    $environments += @{ Name = "features/$featureName/b-test"; Port = [int]"${xx}${y}1" }
+    $environments += @{ Name = "features/$featureName/a-test"; Port = [int]"${xx}${y}2" }
+    $environments += @{ Name = "features/$featureName/merge";  Port = [int]"${xx}${y}3" }
+}
 
 foreach ($env in $environments) {
     $worktreePath = Join-Path $rootDir $env.Name
