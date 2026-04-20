@@ -8,6 +8,8 @@ const app = express();
 const PORT = 8080;
 const STRATEGY_DIR = path.resolve(__dirname, '..', '..', '..');
 
+// REBUILD Watcher (monitoring entities and gardener/entities for auto-indexing)
+const monitor = chokidar.watch([
   path.join(STRATEGY_DIR, 'entities'),
   path.join(STRATEGY_DIR, 'tools', 'gardener', 'entities')
 ], {
