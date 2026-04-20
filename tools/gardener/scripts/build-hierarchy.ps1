@@ -2,10 +2,10 @@
 # Generates a visual hierarchy table from index.csv
 # Format: Each level of depth is its own column. Every entity gets its own row.
 
-$strategyRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot\..\..")
-$entitiesDir  = "$strategyRoot\gardener\entities"
+$strategyRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot\..\..\..")
+$entitiesDir  = "$strategyRoot\tools\gardener\entities"
 $indexCsv     = "$entitiesDir\index.csv"
-$outputCsv    = "$entitiesDir\_hierarchy.csv"
+$outputCsv    = "$entitiesDir\hierarchy.csv"
 
 if (-not (Test-Path $indexCsv)) {
     Write-Error "Could not find index.csv. Run build-index.ps1 first."

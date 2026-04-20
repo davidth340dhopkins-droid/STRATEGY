@@ -1,7 +1,7 @@
 # cleanup.ps1
 # Cleans up old template folders, leaving only the most recent one.
 
-$strategyRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot\..\..")
+$strategyRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot\..\..\..")
 $templateDir = "$strategyRoot\tools\gardener\template"
 
 $vFolders = Get-ChildItem -Path $templateDir -Directory | Where-Object { $_.Name -match '^v\d+$' } | Sort-Object { [int]($_.Name -replace 'v', '') } -Descending
