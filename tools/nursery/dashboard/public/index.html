@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Nursery Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    
+    <main class="container">
+        <header>
+            <h1>Nursery Pipelines</h1>
+            <p>Real-time telemetry for all active sprout environments</p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            Connecting to registry...
+        </div>
+
+        <div id="error" class="error hidden"></div>
+
+        <div id="grid" class="pipeline-grid">
+            <!-- Cards injected via JS -->
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

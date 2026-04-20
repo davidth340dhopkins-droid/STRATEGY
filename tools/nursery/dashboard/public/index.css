@@ -1,0 +1,115 @@
+:root {
+    --bg-dark: #09090b;
+    --card-bg: rgba(24, 24, 27, 0.6);
+    --border: rgba(255, 255, 255, 0.1);
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.5);
+    --online: #10b981;
+    --online-glow: rgba(16, 185, 129, 0.4);
+    --offline: #64748b;
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.glass-bg {
+    position: fixed; top: 0; left: 0; right: 0; height: 100vh;
+    background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
+    z-index: -1;
+}
+
+.container {
+    max-width: 1200px; margin: 0 auto; padding: 4rem 2rem;
+}
+
+header { margin-bottom: 4rem; text-align: center; }
+header h1 { font-size: 3rem; font-weight: 700; letter-spacing: -0.05em; margin-bottom: 0.5rem; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+header p { color: var(--text-muted); font-size: 1.1rem; }
+
+.pipeline-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 2rem;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem; padding: 1.5rem;
+    backdrop-filter: blur(12px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+    display: flex; flex-direction: column; gap: 1.5rem;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 40px rgba(0,0,0, 0.5), 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+.card-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+}
+.card-title { font-size: 1.25rem; font-weight: 600; text-transform: capitalize; }
+.card-tier {
+    background: rgba(99, 102, 241, 0.1); color: #818cf8;
+    padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;
+}
+.card-path {
+    font-size: 0.7rem; color: var(--text-muted); font-family: monospace; word-break: break-all; margin-top: 0.25rem; opacity: 0.5;
+}
+
+.stages-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+}
+
+.stage-btn {
+    text-decoration: none; color: var(--text);
+    background: rgba(255,255,255, 0.03);
+    border: 1px solid var(--border); border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.stage-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 500;}
+.stage-name { text-transform: capitalize; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; font-size: 0.8rem;}
+.stage-port { font-size: 0.8rem; font-family: monospace; opacity: 0.7; }
+
+.status-indicator {
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; font-weight: 600;
+}
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.status-indicator.online .dot {
+    background: var(--online);
+    box-shadow: 0 0 10px var(--online-glow);
+    animation: pulse 2s infinite;
+}
+.status-indicator.online .text { color: var(--online); }
+.stage-btn.online { cursor: pointer; border-color: rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05); }
+.stage-btn.online:hover { border-color: rgba(16, 185, 129, 0.5); transform: translateY(-3px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1); }
+.stage-btn.online .stage-name { color: #fff; }
+
+.status-indicator.offline .dot { background: var(--offline); }
+.status-indicator.offline .text { color: var(--offline); }
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.loading { text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 4rem; }
+.spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hidden { display: none !important; }
+.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 1rem; border-radius: 0.5rem; text-align: center; border: 1px solid rgba(239,68,68,0.2); }
