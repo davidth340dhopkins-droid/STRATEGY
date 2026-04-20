@@ -1,0 +1,20 @@
+Usage: stitch-mcp [options] [command]
+
+Stitch MCP OAuth setup assistant
+
+Options:
+  -V, --version              output the version number
+  -h, --help                 display help for command
+
+Commands:
+  doctor [options]           Verify configuration health
+  init [options]             Initialize authentication and MCP configuration
+  logout [options]           Log out of Google Cloud and revoke credentials
+  proxy [options]            Start the Stitch MCP proxy server
+  screens [options]          Explore all screens in a project
+  serve [options]            Serve project HTML screens via local web server
+  site [options]             Build a structured site from Stitch screens
+  snapshot [options]         Create a UI snapshot given a data state
+  tool [options] [toolName]  Invoke MCP tools directly
+  view [options]             Interactively view Stitch resources
+  help [command]             display help for command

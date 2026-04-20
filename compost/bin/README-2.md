@@ -35,7 +35,7 @@ Follow these steps for regular maintenance of the garden:
 
 4. **Cultivate (Gardener)**:
 
-   - Run `pwsh gardener/scripts/add-to-index.ps1` to reformat seeds
+   - Run `pwsh tools/gardener/scripts/add-to-index.ps1` to reformat seeds
      into managed projects.
 
    - This applies the master template and enforces the
@@ -44,7 +44,7 @@ Follow these steps for regular maintenance of the garden:
 5. **Govern (Index)**:
 
    - Monitor the master project list at
-     [`gardener/entities/_index.md`](./gardener/entities/_index.md).
+     [`tools/gardener/entities/index.md`](./tools/gardener/entities/index.md).
 
    - Use the Explorer Dashboard (`localhost:8080`) to browse your
      progress.
@@ -56,7 +56,7 @@ update the template document. These changes will impact all
 managed projects once the build script is re-run (and this may be
 triggered automatically).
 
-1. **Locate the Templates**: Navigate to `gardener/_templates/`.
+1. **Locate the Templates**: Navigate to `tools/gardener/templates/`.
    You will see folders named by version (e.g., `v31`).
 
 2. **Increment the Version**: Duplicate the latest version folder
@@ -69,7 +69,7 @@ triggered automatically).
    instructions within the template file to avoid breakage.
 
 4. **Deploy**: No commands are required. The next time you run
-   `pwsh gardener/scripts/add-to-index.ps1` on a file, the script
+   `pwsh tools/gardener/scripts/add-to-index.ps1` on a file, the script
    will dynamically detect highest version folder and apply its
    contents. Existing entities retain the structure they were
    created with.

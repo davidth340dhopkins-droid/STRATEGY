@@ -1,5 +1,7 @@
 # Ignore all directories inside sprouts
 /entities/sprouts/*
+/compost/*
+!/compost/mulch/
 
 # Except for a .gitkeep file if you want to commit the empty sprouts directory itself
 !/entities/sprouts/.gitkeep
@@ -11,7 +13,12 @@ gardener/dashboard/node_modules/
 # Ignore temp folders generated during workflows
 /tmp/
 _bin/
+# Project diagnostics
+/ag-stop-probe*
 
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Project Resources
+resources/

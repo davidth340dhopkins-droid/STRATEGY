@@ -22,9 +22,9 @@ data into a beautiful, human-readable markdown layout using versioned templates.
 - `entities/v{n}/` — Your actual entity records (Markdown with YAML
   frontmatter).
 
-- `_templates/v{n}/` — Master layouts for each version of the database.
+- `templates/v{n}/` — Master layouts for each version of the database.
 
-- `entities/_index.md` — The auto-generated master list of all entities.
+- `entities/index.md` — The auto-generated master list of all entities.
 
 - `scripts/start-dashboard.ps1` — Starts a live file explorer (Port 8080) for
   remote browsing.

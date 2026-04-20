@@ -34,41 +34,41 @@ parent: "Hometribe"
 
 # [ tagline ] ---------------------------------------------------------------- #
 # A brief, catchy slogan or one-sentence value proposition.
-tagline: ""
+tagline: "Pre-crowdfunding and community-driven project design platform."
 
 # [ description ] ------------------------------------------------------------ #
 # One sentence overview of what this project is.
-description: ""
+description: "Empowers influencers and fans to collaborate on the ideation, design, and pre-funding of creative ventures."
 # ---------------------------------------------------------- #
 
 # [ slogan ] ---------------------------------------------------------------- #
 # Secondary catchy phrase or vision statement.
-slogan: ""
+slogan: "From Ideation to Impact: Design Your Next Adventure with Your Tribe."
 # ---------------------------------------------------------- #
 
 # [ category ] ----------------------------------------------------------------- #
 # More granular classification.
-category: ""
+category: "Platform"
 # ---------------------------------------------------------- #
 
 # [ First Trend ] ------------------------------------------------------------ #
 # Primary trend data.
-first_trend_title: ""
-first_trend_description: ""
+first_trend_title: "Collaborative RFP"
+first_trend_description: "The movement toward structured audience-led project requests."
 first_trend_reference: ""
 # ---------------------------------------------------------- #
 
 # [ Second Trend ] ----------------------------------------------------------- #
 # Secondary trend data.
-second_trend_title: ""
-second_trend_description: ""
+second_trend_title: "Direct-to-Community Monetization"
+second_trend_description: "Influencers moving away from ads toward bespoke project funding."
 second_trend_reference: ""
 # ---------------------------------------------------------- #
 
 # [ Third Trend ] ------------------------------------------------------------ #
 # Tertiary trend data.
-third_trend_title: ""
-third_trend_description: ""
+third_trend_title: "Partnership Placeholders"
+third_trend_description: "Using social networks to map collaborators before they join the platform."
 third_trend_reference: ""
 # ---------------------------------------------------------- #
 
@@ -79,35 +79,33 @@ trend_notes: ""
 
 # [ First Benefit ] ----------------------------------------------------------- #
 # Primary benefit data.
-first_benefit_title: ""
-first_benefit_description: ""
+first_benefit_title: "Market Validation"
+first_benefit_description: "Proposals are validated through RFPs and feedback before any financial investment is made."
 first_benefit_reference: ""
 # ---------------------------------------------------------- #
 
 # [ Second Benefit ] ---------------------------------------------------------- #
 # Secondary benefit data.
-second_benefit_title: ""
-second_benefit_description: ""
+second_benefit_title: "Engagement"
+second_benefit_description: "Audience members feel a sense of ownership over the projects they help design through voting."
 second_benefit_reference: ""
 # ---------------------------------------------------------- #
 
 # [ Third Benefit ] ----------------------------------------------------------- #
 # Tertiary benefit data.
-third_benefit_title: ""
-third_benefit_description: ""
+third_benefit_title: "Risk Reduction"
+third_benefit_description: "Pledges can be reassigned, reducing the fear of 'unfulfilled' projects."
 third_benefit_reference: ""
 # ---------------------------------------------------------- #
 
 # [ Benefit Notes ] ----------------------------------------------------------- #
 # General notes for any other benefits.
-benefit_notes: '''
-This is a multi-line note. It has "double quotes" and 'single quotes'. No escaping required!
-'''
+benefit_notes: ""
 # ---------------------------------------------------------- #
 
 # [ notes ] ------------------------------------------------------------------ #
 # Freeform. Additional context, blockers, reminders.
-notes: ""
+notes: "Primary launch categories include theatrical dining and immersive cruises. Includes RFP to Proposal lifecycle, public/private targeting, and placeholder profile partner suggestions."
 # ---------------------------------------------------------- #
 
 # ##############################################################################
