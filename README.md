@@ -34,7 +34,7 @@ This section provides an index of the major components and directories of the St
 
 ### **Terminology**
 
-- **[`glossary.md`](./glossary.md)** — Definitions for terms with special meanings within the Strategy Garden.
+- **[`glossary.md`](./entities/glossary.md)** — Definitions for terms with special meanings within the Strategy Garden.
 
 ---
 
@@ -48,7 +48,7 @@ Follow these steps for regular maintenance of the garden:
 
 2. **Sort (Glossary)**:
    - Review your compost and distill key terms, concepts, or potential brand identities.
-   - Document them in [`glossary.md`](./glossary.md). This is where ideas are stored before they are born as projects.
+   - Document them in [`glossary.md`](./entities/glossary.md). This is where ideas are stored before they are born as projects.
 
 3. **Instantiate (Seeds)**:
    - When a concept is ready to become a project, create a new document in [`entities/seeds/`](./entities/seeds/).
@@ -96,7 +96,7 @@ This **Strategy Garden** is fashioned to build and discover the optimal project 
 ## **Process Overview**
 
 ### **Gather & Sort**
-Firstly, ideas are gathered in the "glossary" ([`glossary.md`](./glossary.md)). These ideas may optionally be sourced from raw data that is dumped in the `compost/` folder, which is distilled into key terms, concepts, or potential brand identities.
+Firstly, ideas are gathered in the "glossary" ([`glossary.md`](./entities/glossary.md)). These ideas may optionally be sourced from raw data that is dumped in the `compost/` folder, which is distilled into key terms, concepts, or potential brand identities.
 
 ### **Plant**
 Secondly, select glossary entries are converted into "seed" entities. To do so, each idea is assigned a key and a document is composed for it in the [`entities/seeds/`](./entities/seeds/) subdirectory. These may be freeform documents or they may be created (and/or processed) using the "gardener" tool. Processed seed documents are added to the gardener's "index" ([`tools/gardener/entities/index.md`](./tools/gardener/entities/index.md)) which makes it easier to edit multiple seed documents at once.

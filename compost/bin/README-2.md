@@ -23,7 +23,7 @@ Follow these steps for regular maintenance of the garden:
    - Review your compost and distill key terms, concepts, or
      potential brand identities.
 
-   - Document them in [`glossary.md`](./glossary.md). This is where
+   - Document them in [`glossary.md`](../../entities/glossary.md). This is where
      ideas are stored before they are born as projects.
 
 3. **Instantiate (Seeds)**:
