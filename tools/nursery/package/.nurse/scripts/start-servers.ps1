@@ -23,12 +23,11 @@ if ($Target -ne "core") {
 }
 $y = 1 # Core is pipeline 1
 
-# 2. Tier Discovery
-$xx = 30
-if (Test-Path $tierFile) {
-    # If the project generated a previous tier bump, read it.
-    $xx = [int](Get-Content $tierFile -Raw)
-}
+# 2. Tier Discovery & Registry Lock
+$strategyRoot = [System.IO.Path]::GetFullPath("$rootDir\..\..\..")
+$registryFile = Join-Path $strategyRoot "tools\nursery\port_registry.json"
+$registryDir = Split-Path $registryFile -Parent
+if (-not (Test-Path $registryDir)) { New-Item -ItemType Directory -Path $registryDir -Force | Out-Null }
 
 function Get-PortOwnerPath {
     param([int]$port)
@@ -37,9 +36,7 @@ function Get-PortOwnerPath {
         $conn = Get-NetTCPConnection -LocalPort $port -ErrorAction Stop
         if ($conn -and $conn.OwningProcess) {
             $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $($conn.OwningProcess)"
-            if ($proc) {
-                return $proc.CommandLine
-            }
+            if ($proc) { return $proc.CommandLine }
         }
     } catch { }
     return $null
@@ -56,45 +53,111 @@ function Stop-PortOwner {
     } catch { }
 }
 
-$foundFreeTier = $false
-Write-Host "Scanning for available port tier..." -ForegroundColor Gray
-
-while (-not $foundFreeTier -and $xx -le 99) {
-    # e.g., 3010, 3011, 3012, 3013
-    $p0 = [int]"${xx}${y}0"
-    $p1 = [int]"${xx}${y}1"
-    $p2 = [int]"${xx}${y}2"
-    $p3 = [int]"${xx}${y}3"
-    
-    $ports = @($p0, $p1, $p2, $p3)
-    $allFreeOrOwned = $true
-    
-    foreach ($p in $ports) {
-        $cmdLine = Get-PortOwnerPath -port $p
-        if ($null -ne $cmdLine) {
-            # Is it our app? We check if the command line contains our root sprout directory path.
-            $escapedRoot = [regex]::Escape($rootDir)
-            if ($cmdLine -match $escapedRoot) {
-                Write-Host "Port $p is currently used by an old instance of THIS project. Terminating..." -ForegroundColor Yellow
-                Stop-PortOwner -port $p
-            } else {
-                Write-Host "Port $p is blocked by another project or application. Bumping tier to $($xx + 1)..." -ForegroundColor Magenta
-                $allFreeOrOwned = $false
-                break
-            }
-        }
-    }
-    
-    if ($allFreeOrOwned) {
-        $foundFreeTier = $true
-    } else {
-        $xx++
+$lockAcquired = $false
+$stream = $null
+$retryCount = 0
+Write-Host "Acquiring registry lock..." -ForegroundColor Gray
+while (-not $lockAcquired -and $retryCount -lt 50) {
+    try {
+        $stream = [System.IO.File]::Open($registryFile, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        $lockAcquired = $true
+    } catch {
+        Start-Sleep -Milliseconds 100
+        $retryCount++
     }
 }
 
-if (-not $foundFreeTier) {
-    Write-Error "Could not find a free block of ports up to tier 99."
+if (-not $lockAcquired) {
+    Write-Error "Failed to acquire lock on port registry ($registryFile). Is another project starting?"
     exit 1
+}
+
+try {
+    $reader = New-Object System.IO.StreamReader($stream)
+    $jsonContent = $reader.ReadToEnd()
+    $registryData = @{}
+    if (-not [string]::IsNullOrWhiteSpace($jsonContent)) {
+        try {
+            $parsed = $jsonContent | ConvertFrom-Json
+            if ($null -ne $parsed) {
+                foreach ($prop in $parsed.psobject.properties) {
+                    $registryData[$prop.Name] = $prop.Value
+                }
+            }
+        } catch {
+            Write-Warning "Failed to parse registry JSON. Rebuilding..."
+        }
+    }
+
+    # Find tier for this project or next available
+    $xx = 30
+    $foundFreeTier = $false
+    # First, check if we already have an assignment
+    foreach ($key in $registryData.Keys) {
+        if ($registryData[$key] -eq $rootDir) {
+            $xx = [int]$key
+            break
+        }
+    }
+
+    Write-Host "Scanning for available port tier starting at $xx..." -ForegroundColor Gray
+    while (-not $foundFreeTier -and $xx -le 655) {
+        # Is this tier owned by another project in the registry?
+        $tierKey = $xx.ToString()
+        if ($registryData.ContainsKey($tierKey) -and $registryData[$tierKey] -ne $rootDir) {
+            $xx++
+            continue
+        }
+
+        # Check OS ports
+        $p0 = [int]"${xx}${y}0"
+        $p1 = [int]"${xx}${y}1"
+        $p2 = [int]"${xx}${y}2"
+        $p3 = [int]"${xx}${y}3"
+        $ports = @($p0, $p1, $p2, $p3)
+        
+        $allFreeOrOwned = $true
+        foreach ($p in $ports) {
+            $cmdLine = Get-PortOwnerPath -port $p
+            if ($null -ne $cmdLine) {
+                $escapedRoot = [regex]::Escape($rootDir)
+                if ($cmdLine -match $escapedRoot) {
+                    Write-Host "Port $p is currently used by an old instance of THIS project. Terminating..." -ForegroundColor Yellow
+                    Stop-PortOwner -port $p
+                } else {
+                    Write-Host "Port $p is blocked by another project or application. Bumping tier ($p)..." -ForegroundColor Magenta
+                    $allFreeOrOwned = $false
+                    break
+                }
+            }
+        }
+
+        if ($allFreeOrOwned) {
+            $foundFreeTier = $true
+        } else {
+            $xx++
+            if ($registryData.ContainsKey($tierKey) -and $registryData[$tierKey] -eq $rootDir) {
+                $registryData.Remove($tierKey)
+            }
+        }
+    }
+
+    if (-not $foundFreeTier) {
+        Write-Error "Could not find a free block of ports up to tier 655."
+        exit 1
+    }
+
+    # Save to registry
+    $registryData[$xx.ToString()] = $rootDir
+    $stream.SetLength(0)
+    $writer = New-Object System.IO.StreamWriter($stream)
+    $writer.Write(($registryData | ConvertTo-Json -Depth 2))
+    $writer.Flush()
+} finally {
+    if ($null -ne $stream) {
+        $stream.Close()
+        $stream.Dispose()
+    }
 }
 
 # 3. Execution
