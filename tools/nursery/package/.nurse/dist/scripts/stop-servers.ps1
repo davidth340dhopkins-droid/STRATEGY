@@ -1,12 +1,8 @@
-# .nurse/scripts/stop-servers.ps1
-# Gracefully identifies and terminates servers associated with this project.
-
 param(
     [Parameter(Mandatory=$false)]
     [string]$Target = "core"
 )
 
-# 1. Robust Project Root Discovery
 $current = $PSScriptRoot
 $projectRoot = $null
 while ($current) {
@@ -17,15 +13,16 @@ while ($current) {
 }
 if ($null -eq $projectRoot) { $projectRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent | Split-Path -Parent }
 
-# Find the local root (ProjectRoot or FeatureRoot)
-$localNurseRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent
-$localRoot = $localNurseRoot | Split-Path -Parent
-$tierFile = Join-Path $localNurseRoot ".porttier"
-
-if (-not (Test-Path $tierFile)) {
-    Write-Host "No .porttier found. Skipping graceful stop." -ForegroundColor Gray
-    exit 0
+$isFeature = ($Target -ne "core")
+if ($isFeature) {
+    $featureName = $Target -replace "^feature/", ""
+    $localRoot = Join-Path (Join-Path (Join-Path $projectRoot "pipeline") "feature") $featureName
+} else {
+    $localRoot = $projectRoot
 }
+
+$tierFile = Join-Path $localRoot ".porttier"
+if (-not (Test-Path $tierFile)) { exit 0 }
 
 function Get-PortOwnerPath {
     param([int]$port)
@@ -39,33 +36,16 @@ function Get-PortOwnerPath {
     return $null
 }
 
-function Stop-PortOwner {
-    param([int]$port)
-    try {
-        $conn = Get-NetTCPConnection -LocalPort $port -ErrorAction Stop
-        if ($conn -and $conn.OwningProcess) {
-            Write-Host "Terminating process $($conn.OwningProcess) on port $port..." -ForegroundColor Yellow
-            Stop-Process -Id $conn.OwningProcess -Force
-            Start-Sleep -Seconds 1
-        }
-    } catch { }
-}
-
 $xx = [int](Get-Content $tierFile -Raw)
-$y = 1 # Core is pipeline 1
+$ports = @([int]"${xx}10", [int]"${xx}11", [int]"${xx}12", [int]"${xx}13")
 
-# Ports: p0, p1, p2, p3
-$ports = @([int]"${xx}${y}0", [int]"${xx}${y}1", [int]"${xx}${y}2", [int]"${xx}${y}3")
-
-Write-Host "Releasing ports for tier $xx..." -ForegroundColor Cyan
 foreach ($p in $ports) {
     $cmdLine = Get-PortOwnerPath -port $p
     if ($null -ne $cmdLine) {
-        $escapedRoot = [regex]::Escape($rootDir)
+        $escapedRoot = [regex]::Escape($localRoot)
         if ($cmdLine -match $escapedRoot) {
-            Stop-PortOwner -port $p
+            $conn = Get-NetTCPConnection -LocalPort $p -ErrorAction Stop
+            if ($conn -and $conn.OwningProcess) { Stop-Process -Id $conn.OwningProcess -Force }
         }
     }
 }
-
-Write-Host "Project servers stopped." -ForegroundColor Green

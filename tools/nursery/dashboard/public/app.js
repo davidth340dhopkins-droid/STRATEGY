@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function promoteEnvironment(projectPath, fromStage, toStage, sourceCard, fromBtn) {
         if (!fromStage || !toStage || fromStage === toStage) return;
 
-        const isFeature = projectPath.toLowerCase().includes('features');
+        const isFeature = projectPath.toLowerCase().includes('feature');
         const steps = getPromoteChain(fromStage, toStage, isFeature);
         
         // Add all future steps to queued

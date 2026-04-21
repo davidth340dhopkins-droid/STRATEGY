@@ -37,6 +37,27 @@ function checkPort(port) {
 }
 
 const { exec } = require('child_process');
+
+function getScriptPath(projectPath, scriptName) {
+    const isFeature = projectPath.toLowerCase().includes(path.sep + 'feature' + path.sep) || projectPath.toLowerCase().endsWith(path.sep + 'feature');
+    if (isFeature) {
+        const normalized = projectPath.replace(/\\/g, '/');
+        const parts = normalized.split('/');
+        const featIdx = parts.lastIndexOf('feature');
+        const featureName = parts.length > featIdx + 1 ? parts[featIdx + 1] : path.basename(projectPath);
+        const rootNurseDir = path.resolve(projectPath, '..', '..', '..', '.nurse', 'dist', 'scripts');
+        return {
+            script: path.join(rootNurseDir, scriptName),
+            target: `feature/${featureName}`
+        };
+    } else {
+        return {
+            script: path.join(projectPath, '.nurse', 'dist', 'scripts', scriptName),
+            target: 'core'
+        };
+    }
+}
+
 const inProgress = new Map();
 
 app.post('/api/environments/kill', express.json(), async (req, res) => {
@@ -45,10 +66,12 @@ app.post('/api/environments/kill', express.json(), async (req, res) => {
     if (inProgress.has(projectPath)) return res.status(429).json({ error: "Action already in progress for this project." });
     
     inProgress.set(projectPath, true);
-    const stopScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'stop-servers.ps1');
+    const execParams = getScriptPath(projectPath, 'stop-servers.ps1');
+    const stopScript = execParams.script;
+    const targetArg = execParams.target;
     console.log(`[Lifecycle] Killing: ${projectPath}`);
     
-    exec(`pwsh -File "${stopScript}"`, (error, stdout, stderr) => {
+    exec(`pwsh -File "${stopScript}" -Target "${targetArg}"`, (error, stdout, stderr) => {
         inProgress.delete(projectPath);
         if (error) {
             console.error(`[Kill Error]: ${error.message}`);
@@ -64,11 +87,15 @@ app.post('/api/environments/restart', express.json(), async (req, res) => {
     if (inProgress.has(projectPath)) return res.status(429).json({ error: "Action already in progress for this project." });
     
     inProgress.set(projectPath, true);
-    const stopScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'stop-servers.ps1');
-    const startScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'start-servers.ps1');
+    const execParams = getScriptPath(projectPath, 'stop-servers.ps1');
+    const stopScript = execParams.script;
+    const targetArg = execParams.target;
+    const startParams = getScriptPath(projectPath, 'start-servers.ps1');
+    const startScript = startParams.script;
+    const startTarget = startParams.target;
     console.log(`[Lifecycle] Restarting: ${projectPath}`);
     
-    exec(`pwsh -Command "& '${stopScript}'; Start-Sleep -Seconds 2; & '${startScript}'"`, { timeout: 30000 }, (error, stdout, stderr) => {
+    exec(`pwsh -Command "& '${stopScript}' -Target '${targetArg}'; Start-Sleep -Seconds 2; & '${startScript}' -Target '${startTarget}'"`, { timeout: 30000 }, (error, stdout, stderr) => {
         inProgress.delete(projectPath);
         if (error) {
             console.error(`[Restart Error]: ${error.message}`);
@@ -82,10 +109,12 @@ app.post('/api/environments/test-promote', express.json(), async (req, res) => {
     const { path: projectPath } = req.body;
     if (!projectPath) return res.status(400).json({ error: "Missing project path" });
 
-    const testPromoteScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'test-promote.ps1');
+    const tpParams = getScriptPath(projectPath, 'test-promote.ps1');
+    const testPromoteScript = tpParams.script;
+    const tpTarget = tpParams.target;
     console.log(`[Test-Promote] Bumping dev version: ${projectPath}`);
 
-    exec(`pwsh -File "${testPromoteScript}"`, { timeout: 15000 }, (error, stdout, stderr) => {
+    exec(`pwsh -File "${testPromoteScript}" -Target "${tpTarget}"`, { timeout: 15000 }, (error, stdout, stderr) => {
         if (stdout) console.log(`[Test-Promote stdout]: ${stdout}`);
         if (error) {
             console.error(`[Test-Promote Error]: ${error.message}`);
@@ -107,11 +136,13 @@ app.post('/api/environments/promote', express.json(), async (req, res) => {
     if (from === 'dev') from = 'merge';
     if (to   === 'dev') to   = 'merge';
 
-    const promoteScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'promote.ps1');
+    const pParams = getScriptPath(projectPath, 'promote.ps1');
+    const promoteScript = pParams.script;
+    const pTarget = pParams.target;
     console.log(`[Promote] ${path.basename(projectPath)}: ${from} → ${to}`);
     console.log(`[Promote] Script: ${promoteScript}`);
 
-    exec(`pwsh -File "${promoteScript}" -From "${from}" -To "${to}"`, { timeout: 60000 }, (error, stdout, stderr) => {
+    exec(`pwsh -File "${promoteScript}" -From "${from}" -To "${to}" -Target "${pTarget}"`, { timeout: 60000 }, (error, stdout, stderr) => {
         inProgress.delete(promoteKey);
         if (stdout) console.log(`[Promote stdout]: ${stdout}`);
         if (stderr) console.warn(`[Promote stderr]: ${stderr}`);
@@ -125,28 +156,33 @@ app.post('/api/environments/promote', express.json(), async (req, res) => {
 
 // Helper to read version file
 function readVersion(projectPath, stage, type) {
-    // If it's a feature, the stage directories are now flat in projectPath (dev, a-test, b-test)
-    // If it's core, they are in projectPath/core/stage
-    let stageDir = stage;
-    if (stage === 'merge' && type === 'feature') stageDir = 'dev';
+    const featureMap = {
+        'stable': 'stable',
+        'b-test': 'b-test',
+        'a-test': 'a-test',
+        'merge': 'dev'
+    };
     
-    const relativePath = type === 'feature' ? path.join('pipeline', 'feature', stageDir) : path.join('pipeline', 'core', stageDir);
-    const versionFile = path.join(projectPath, relativePath, 'VERSION');
+    let rel;
+    if (type === 'feature') {
+        rel = featureMap[stage] || stage;
+    } else {
+        rel = path.join('pipeline', 'core', stage);
+    }
     
+    const versionFile = path.join(projectPath, rel, 'VERSION');
     try {
         if (fs.existsSync(versionFile)) {
             return fs.readFileSync(versionFile, 'utf8').trim();
         }
     } catch (e) {}
-    
-    // Fallback to project root VERSION if stage-specific not found
+
+    // Root fallback
     const rootVersion = path.join(projectPath, 'VERSION');
     try {
-        if (fs.existsSync(rootVersion)) {
-            return fs.readFileSync(rootVersion, 'utf8').trim();
-        }
+        if (fs.existsSync(rootVersion)) return fs.readFileSync(rootVersion, 'utf8').trim();
     } catch (e) {}
-
+    
     return '0.1.0';
 }
 
@@ -186,7 +222,7 @@ app.get('/api/environments', async (req, res) => {
             const aTestPort = parseInt(`${tier}12`, 10);
             const mergePort = parseInt(`${tier}13`, 10);
 
-            const projectName = path.basename(projectPath);
+            let projectName = path.basename(projectPath);
             const isFeature = projectPath.toLowerCase().includes(path.sep + 'feature' + path.sep) || projectPath.toLowerCase().endsWith(path.sep + 'feature');
             let parentProject = null;
             
@@ -237,3 +273,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`--- Nursery Pipeline Dashboard ---`);
     console.log(`Listening on http://localhost:${PORT}`);
 });
+
+// Simple fix: if feature, prepend parent name
+
+

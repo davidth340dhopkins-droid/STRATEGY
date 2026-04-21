@@ -60,19 +60,30 @@ if ($Delete) {
 }
 
 try {
-    # 0. Forcefully remove Git worktrees if this is a Git repo
+    # 0. ALWAYS: Prune + force-remove ALL worktrees inside this sprout before anything else.
+    # This releases git branch locks so branches can be re-checked-out cleanly elsewhere.
     if (Test-Path (Join-Path $sproutDir.FullName ".git")) {
-        Write-Host "Releasing Git worktrees..." -ForegroundColor Gray
+        Write-Host "Releasing all Git worktrees..." -ForegroundColor Gray
         Push-Location $sproutDir.FullName
-        # Find all worktrees associated with this repo and remove them
-        $worktrees = git worktree list --porcelain | Select-String "^worktree " | ForEach-Object { $_.ToString().Replace("worktree ", "").Trim() }
+        
+        # First prune dead worktrees (directories already deleted)
+        git worktree prune 2>$null
+        
+        # Then force-remove any live worktrees inside the sprout (all except the main .git root)
+        $worktrees = git worktree list --porcelain 2>$null | Select-String "^worktree " | ForEach-Object {
+            $_.ToString() -replace "^worktree ", "" | ForEach-Object { $_.Trim() }
+        }
         foreach ($wt in $worktrees) {
-            # Only remove if it's inside our sprout directory (don't touch the main one)
-            if ($wt -match [regex]::Escape($sproutDir.FullName) -and $wt -ne $sproutDir.FullName) {
-                Write-Host "Removing worktree $wt..." -ForegroundColor Yellow
+            $normalWt  = $wt.Replace("\\", "/")
+            $normalRoot = $sproutDir.FullName.Replace("\\", "/")
+            if ($normalWt -ne $normalRoot -and $normalWt.StartsWith($normalRoot)) {
+                Write-Host "Removing worktree: $wt" -ForegroundColor Yellow
                 git worktree remove --force $wt 2>$null
             }
         }
+        
+        # Final prune to unregister any that couldn't be removed
+        git worktree prune 2>$null
         Pop-Location
     }
 
@@ -83,21 +94,18 @@ try {
         pwsh $stopScript
     }
 
-    # 2. Aggressively kill ANY remaining process that has this folder in its command line (e.g. background shells)
-    # ONLY if the user specifically asked to -Kill
+    # 2. If -Kill: also scavenge processes by path and stop port owners
     if ($Kill) {
         Write-Host "Invoking Global Scavenger..." -ForegroundColor Gray
         $scavengeScript = Join-Path $strategyRoot "tools\nursery\scripts\scavenge.ps1"
-        if (Test-Path $scavengeScript) {
-            pwsh $scavengeScript
-        }
+        if (Test-Path $scavengeScript) { pwsh $scavengeScript }
         
-        Write-Host "Scanning for background shells or locked processes for THIS sprout..." -ForegroundColor Gray
+        Write-Host "Scanning for background shells locked to this sprout..." -ForegroundColor Gray
         $escapedRoot = [regex]::Escape($sproutDir.FullName)
         $processes = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match $escapedRoot }
         foreach ($proc in $processes) {
             if ($proc.ProcessId -ne $PID) {
-                Write-Host "Stopping matching process $($proc.ProcessId): $($proc.Name)..." -ForegroundColor Yellow
+                Write-Host "Stopping PID $($proc.ProcessId): $($proc.Name)" -ForegroundColor Yellow
                 Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
             }
         }

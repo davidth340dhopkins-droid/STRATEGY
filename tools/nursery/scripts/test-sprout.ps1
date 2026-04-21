@@ -59,61 +59,41 @@ if (-not (Test-Path $sproutDir)) {
 Write-Host "`n--- PHASE 3: Simulating App Setup in pipeline/core/stable ---" -ForegroundColor Cyan
 $coreStableDir = Join-Path $sproutDir "pipeline\core\stable"
 
+# We drop the server into the STABLE worktree, as a developer would.
 $serverContent = @'
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 let port = 3000;
-
-// Scan specific argument for the dynamic {PORT} replacement
 const portIndex = process.argv.indexOf('--port');
-if (portIndex > -1) {
-    port = parseInt(process.argv[portIndex + 1]);
-}
+if (portIndex > -1) { port = parseInt(process.argv[portIndex + 1]); }
 
 const server = http.createServer((req, res) => {
     let nurseryVersion = "Unknown";
     let envVersion = "Unknown";
-
     try {
-        nurseryVersion = fs.readFileSync(path.join(__dirname, '../../../.nurse/VERSION'), 'utf8').trim();
-        envVersion = fs.readFileSync(path.join(__dirname, 'VERSION'), 'utf8').trim();
-    } catch (e) {
-        console.error("Version read failed:", e.message);
-    }
+        let nursePath = path.join(__dirname, '.nurse/VERSION');
+        if (!fs.existsSync(nursePath)) nursePath = path.join(__dirname, '../.nurse/VERSION');
+        if (!fs.existsSync(nursePath)) nursePath = path.join(__dirname, '../../.nurse/VERSION');
+        if (!fs.existsSync(nursePath)) nursePath = path.join(__dirname, '../../../.nurse/VERSION');
+        if (fs.existsSync(nursePath)) nurseryVersion = fs.readFileSync(nursePath, 'utf8').trim();
+        if (fs.existsSync(path.join(__dirname, 'VERSION'))) envVersion = fs.readFileSync(path.join(__dirname, 'VERSION'), 'utf8').trim();
+    } catch (e) {}
 
     res.writeHead(200, {'Content-Type': 'text/html'});
-    res.end(`
-        <div style="font-family: sans-serif; padding: 2rem; background: #f4f4f9; border-radius: 8px; max-width: 450px; margin: 2rem auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ddd;">
-            <h1 style="color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 0.5rem; margin-top: 0;">Strategy Sprout</h1>
-            <p style="font-size: 1.1rem; color: #7f8c8d;"><strong>Environment Port:</strong> ${port}</p>
-            <div style="background: #fff; padding: 1.5rem; border-radius: 6px; border-left: 5px solid #2ecc71; margin-top: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem;">
-                    <span style="color: #34495e; font-weight: bold;">Blueprint Generation:</span>
-                    <span style="background: #ecf0f1; padding: 2px 8px; border-radius: 4px; font-family: monospace;">v${nurseryVersion}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #34495e; font-weight: bold;">Environment App:</span>
-                    <span style="background: #e8f4fd; color: #2980b9; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold;">v${envVersion}</span>
-                </div>
-            </div>
-            <p style="font-size: 0.8rem; color: #95a5a6; margin-top: 1.5rem; text-align: center;">Idempotent Garden Pipeline Active</p>
-        </div>
-    `);
+    res.end(`<h1>Strategy Garden</h1><p>Running on Port: ${port}</p><p>Nursery: v${nurseryVersion}</p><p>App: v${envVersion}</p>`);
 });
 
-server.listen(port, () => {
-    console.log('Test server actively running natively on port ' + port);
-});
+server.listen(port, () => { console.log('Server running on port ' + port); });
 '@
 
 $serverFile = Join-Path $coreStableDir "server.js"
 Set-Content -Path $serverFile -Value $serverContent -Encoding UTF8
 
-Write-Host "Committing dummy server into core/stable application branch..." -ForegroundColor Gray
+Write-Host "Committing dummy server into stable (no prefix nesting)..." -ForegroundColor Gray
 Push-Location $coreStableDir
-git add . | Out-Null
+git add server.js | Out-Null
 git commit -m "feat: built initial app server" | Out-Null
 Pop-Location
 
@@ -122,9 +102,49 @@ Push-Location $sproutDir
 pwsh .nurse/dist/scripts/build-pipeline.ps1 -RunCommand "node server.js --port {PORT}"
 Pop-Location
 
-Write-Host "`n--- TEST SPROUT COMPLETE! ---" -ForegroundColor Green
-Write-Host "A clean NodeJS server is mapped across all four pipeline branches." -ForegroundColor Gray
-Write-Host "To boot the 4 dynamic port servers, run:" -ForegroundColor Yellow
-Write-Host "pwsh entities/sprouts/testsprout/.nurse/dist/scripts/start-servers.ps1" -ForegroundColor Yellow
+Write-Host "`n--- PHASE 5: Booting & Verifying Pipeline ---" -ForegroundColor Cyan
+Push-Location $sproutDir
+pwsh .nurse/dist/scripts/start-servers.ps1
 
+# Wait for boot
+Write-Host "Waiting for servers to initialize..." -ForegroundColor Gray
+Start-Sleep -Seconds 5
+
+$tier = Get-Content .nurse/.porttier -Raw
+$envs = @(
+    @{ Name = "stable"; Port = [int]"${tier}10" },
+    @{ Name = "b-test"; Port = [int]"${tier}11" },
+    @{ Name = "a-test"; Port = [int]"${tier}12" },
+    @{ Name = "merge";  Port = [int]"${tier}13" }
+)
+
+$allValid = $true
+foreach ($e in $envs) {
+    if (-not (Test-Path "pipeline/core/$($e.Name)/server.js")) {
+        Write-Error "CRITICAL: server.js missing in pipeline/core/$($e.Name)!"
+        $allValid = $false
+    }
+    
+    $conn = Get-NetTCPConnection -LocalPort $e.Port -ErrorAction SilentlyContinue
+    if ($null -eq $conn) {
+        Write-Error "CRITICAL: Stage $($e.Name) NOT listening on port $($e.Port)!"
+        $allValid = $false
+    } else {
+        Write-Host "SUCCESS: Stage $($e.Name) active on port $($e.Port)." -ForegroundColor Green
+    }
+}
+
+if ($allValid) {
+    Write-Host "`n--- TEST SPROUT SUCCESSFUL! ---" -ForegroundColor Green
+    Write-Host "All 4 environments are online and functional on port tier $tier." -ForegroundColor Gray
+    
+    # Restart the dashboard after successful test
+    Write-Host "Restarting Pipeline Dashboard..." -ForegroundColor Cyan
+    Start-Process pwsh -ArgumentList "-NonInteractive", "-Command", "cd '$strategyRoot'; pwsh tools/nursery/scripts/start-dashboard.ps1" -WindowStyle Hidden
+} else {
+    Write-Error "Test sprout failed validation."
+    Pop-Location; exit 1
+}
+
+Pop-Location
 Pop-Location

@@ -37,21 +37,45 @@ function Stop-PortOwner {
     } catch { }
 }
 
-# 2. Cleanup via Port Registry
+# 2. Cleanup via Port Registry & Registry Pruning
 if (Test-Path $registryFile) {
     Write-Host "Processing port registry assignments..." -ForegroundColor Cyan
     try {
         $registryData = Get-Content $registryFile -Raw | ConvertFrom-Json
         if ($null -ne $registryData) {
+            $updatedRegistry = @{}
             foreach ($prop in $registryData.psobject.properties) {
                 $tier = [int]$prop.Name
-                Write-Host "Scrubbing tier $tier..." -ForegroundColor Gray
-                # Tiers use ports: [tier]10, [tier]11, [tier]12, [tier]13
-                10..13 | ForEach-Object {
-                    $port = [int]($tier.ToString() + $_.ToString())
-                    Stop-PortOwner -port $port
+                $projectPath = $prop.Value
+                
+                # Pruning logic: If path doesn't exist or is missing sentinel, skip it (prune)
+                $sentinelFile = Join-Path $projectPath ".initialized"
+                if (-not (Test-Path $projectPath) -or -not (Test-Path $sentinelFile)) {
+                    Write-Host "Pruning dead/uninitialized registry entry: $projectPath (Tier $tier)" -ForegroundColor Yellow
+                    continue
                 }
+
+                # If the path is an old structure (contains features/ instead of pipeline/feature/)
+                if ($projectPath -match "features\\") {
+                    Write-Host "Pruning legacy features/ registry entry: $projectPath (Tier $tier)" -ForegroundColor Yellow
+                    continue
+                }
+
+                Write-Host "Scrubbing tier $tier ($projectPath)..." -ForegroundColor Gray
+                # Tiers use ports: [tier][Y][Index]
+                # Scrub Y=1 (Core) and Y=2 (Initial Features)
+                1 | ForEach-Object {
+                    $subIdx = $_
+                    0..3 | ForEach-Object {
+                        $p = [int]($tier.ToString() + $subIdx.ToString() + $_.ToString())
+                        Stop-PortOwner -port $p
+                    }
+                }
+                $updatedRegistry[$tier.ToString()] = $projectPath
             }
+            
+            # Save the pruned registry
+            $updatedRegistry | ConvertTo-Json -Depth 2 | Set-Content -Path $registryFile -Encoding UTF8
         }
     } catch {
         Write-Warning "Failed to parse port registry. Proceeding with rogue process scan."
