@@ -7,8 +7,9 @@ param(
 )
 
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
-$rootDir = $nurseryDir | Split-Path -Parent
-$tierFile = Join-Path $nurseryDir ".porttier"
+$nurseRootDir = $nurseryDir | Split-Path -Parent
+$rootDir = $nurseRootDir | Split-Path -Parent
+$tierFile = Join-Path $nurseRootDir ".porttier"
 
 if (-not (Test-Path $tierFile)) {
     Write-Host "No .porttier found. Skipping graceful stop." -ForegroundColor Gray

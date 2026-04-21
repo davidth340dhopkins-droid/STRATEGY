@@ -6,18 +6,20 @@ param(
 )
 
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
+$nurseRootDir = $nurseryDir | Split-Path -Parent # This is the .nurse/ root where state lives
+
 if ($null -eq $RunCommand -or $RunCommand -eq "") {
     $RunCommand = "node server.js --port {PORT}"
 }
-$runCmdFile = Join-Path $nurseryDir ".runcmd"
+$runCmdFile = Join-Path $nurseRootDir ".runcmd"
 Set-Content -Path $runCmdFile -Value $RunCommand -Encoding UTF8
 
-$isFeature = $nurseryDir -match "features"
+$isFeature = $nurseRootDir -match "features"
 if (-not $isFeature) {
     Write-Host "Configuring Core Pipeline..." -ForegroundColor Cyan
     $environments = @("core/stable", "core/b-test", "core/a-test", "core/merge")
 } else {
-    $featureName = Split-Path (Split-Path $nurseryDir -Parent) -Leaf
+    $featureName = Split-Path (Split-Path $nurseRootDir -Parent) -Leaf
     Write-Host "Configuring Feature Pipeline: $featureName..." -ForegroundColor Cyan
     # Flat directory structure for features
     $environments = @("b-test", "a-test", "dev")

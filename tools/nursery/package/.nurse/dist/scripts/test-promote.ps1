@@ -2,8 +2,9 @@
 # Simple utility to increment the version of the primary development workspace.
 
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
-$sproutDir  = $nurseryDir   | Split-Path -Parent
-$isFeature  = $nurseryDir -match "features"
+$nurseRootDir = $nurseryDir | Split-Path -Parent
+$sproutDir  = $nurseRootDir | Split-Path -Parent
+$isFeature  = $nurseRootDir -match "features"
 
 # The "first" environment where development happens
 $targetDir  = if ($isFeature) { "dev" } else { "core/merge" }

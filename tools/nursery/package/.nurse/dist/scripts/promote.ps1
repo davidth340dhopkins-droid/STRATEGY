@@ -15,10 +15,11 @@ param(
 )
 
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
-$sproutDir  = $nurseryDir   | Split-Path -Parent
+$nurseRootDir = $nurseryDir | Split-Path -Parent
+$sproutDir  = $nurseRootDir | Split-Path -Parent
 
 # Determine if we're in a feature context
-$isFeature = $nurseryDir -match "features"
+$isFeature = $nurseRootDir -match "features"
 
 # Mapping aliases
 if ($isFeature) {

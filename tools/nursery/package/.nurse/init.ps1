@@ -2,6 +2,14 @@
 # This script runs once immediately after a sprout directory is created and the package is copied.
 # Its primary purpose is to establish the isolated initial git repository structure.
 
+$nurseryDir = $PSScriptRoot
+$sentinelFile = Join-Path $nurseryDir ".initialized"
+
+if (Test-Path $sentinelFile) {
+    Write-Host "This sprout is already initialized. Skipping init.ps1." -ForegroundColor Yellow
+    exit 0
+}
+
 Write-Host "Initializing isolated Git repository..." -ForegroundColor Cyan
 
 # 1. Initialize empty git repository
@@ -51,13 +59,16 @@ For example, run your \`npx create-vite\` or \`npx create-next-app\` command INS
 Once your application serves correctly (e.g. you know the command to run it locally), return to the Root directory and launch the pipeline builder:
 
 \`\`\`powershell
-pwsh .nurse/scripts/build-pipeline.ps1 -RunCommand "your server command e.g. npm run dev -- --port {PORT}"
+pwsh .nurse/dist/scripts/build-pipeline.ps1 -RunCommand "your server command e.g. npm run dev -- --port {PORT}"
 \`\`\`
 
-*(Be sure to include `{PORT}` exactly where your framework expects a port number).*
+*(Be sure to include \`{PORT}\` exactly where your framework expects a port number).*
 
 This script will read your \`core/stable\` codebase and map out the remaining independent environments (\`core/merge\`, \`core/a-test\`, \`core/b-test\`)!
 "@
 
 Set-Content -Path "README-FIRST.md" -Value $readmeContent -Encoding UTF8
 Write-Host "Dropped README-FIRST.md with instructions!" -ForegroundColor Yellow
+
+# 6. Mark as initialized
+Set-Content -Path $sentinelFile -Value (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Encoding UTF8

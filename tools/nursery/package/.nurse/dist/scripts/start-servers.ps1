@@ -6,9 +6,10 @@ param(
 # 1. Path Configuration
 # .nurse typically rests closely inside the sprout directory after a sprout is executed.
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
-$rootDir = $nurseryDir | Split-Path -Parent
-$runCmdFile = Join-Path $nurseryDir ".runcmd"
-$tierFile = Join-Path $nurseryDir ".porttier"
+$nurseRootDir = $nurseryDir | Split-Path -Parent
+$rootDir = $nurseRootDir | Split-Path -Parent
+$runCmdFile = Join-Path $nurseRootDir ".runcmd"
+$tierFile = Join-Path $nurseRootDir ".porttier"
 
 if (-not (Test-Path $runCmdFile)) {
     Write-Error "Could not find .runcmd. Please run build-pipeline.ps1 first."

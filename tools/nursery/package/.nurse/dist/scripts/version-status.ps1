@@ -2,7 +2,8 @@
 # Shows the current version deployed at each pipeline stage.
 
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
-$sproutDir  = $nurseryDir   | Split-Path -Parent
+$nurseRootDir = $nurseryDir | Split-Path -Parent
+$sproutDir  = $nurseRootDir | Split-Path -Parent
 
 $stages = @(
     @{ Name = "merge";  Dir = "core/merge"  },
