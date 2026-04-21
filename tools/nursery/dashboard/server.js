@@ -45,7 +45,7 @@ app.post('/api/environments/kill', express.json(), async (req, res) => {
     if (inProgress.has(projectPath)) return res.status(429).json({ error: "Action already in progress for this project." });
     
     inProgress.set(projectPath, true);
-    const stopScript = path.join(projectPath, '.nurse', 'scripts', 'stop-servers.ps1');
+    const stopScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'stop-servers.ps1');
     console.log(`[Lifecycle] Killing: ${projectPath}`);
     
     exec(`pwsh -File "${stopScript}"`, (error, stdout, stderr) => {
@@ -64,8 +64,8 @@ app.post('/api/environments/restart', express.json(), async (req, res) => {
     if (inProgress.has(projectPath)) return res.status(429).json({ error: "Action already in progress for this project." });
     
     inProgress.set(projectPath, true);
-    const stopScript = path.join(projectPath, '.nurse', 'scripts', 'stop-servers.ps1');
-    const startScript = path.join(projectPath, '.nurse', 'scripts', 'start-servers.ps1');
+    const stopScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'stop-servers.ps1');
+    const startScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'start-servers.ps1');
     console.log(`[Lifecycle] Restarting: ${projectPath}`);
     
     exec(`pwsh -Command "& '${stopScript}'; Start-Sleep -Seconds 2; & '${startScript}'"`, { timeout: 30000 }, (error, stdout, stderr) => {
@@ -82,7 +82,7 @@ app.post('/api/environments/test-promote', express.json(), async (req, res) => {
     const { path: projectPath } = req.body;
     if (!projectPath) return res.status(400).json({ error: "Missing project path" });
 
-    const testPromoteScript = path.join(projectPath, '.nurse', 'scripts', 'test-promote.ps1');
+    const testPromoteScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'test-promote.ps1');
     console.log(`[Test-Promote] Bumping dev version: ${projectPath}`);
 
     exec(`pwsh -File "${testPromoteScript}"`, { timeout: 15000 }, (error, stdout, stderr) => {
@@ -107,7 +107,7 @@ app.post('/api/environments/promote', express.json(), async (req, res) => {
     if (from === 'dev') from = 'merge';
     if (to   === 'dev') to   = 'merge';
 
-    const promoteScript = path.join(projectPath, '.nurse', 'scripts', 'promote.ps1');
+    const promoteScript = path.join(projectPath, '.nurse', 'dist', 'scripts', 'promote.ps1');
     console.log(`[Promote] ${path.basename(projectPath)}: ${from} → ${to}`);
     console.log(`[Promote] Script: ${promoteScript}`);
 
@@ -130,7 +130,7 @@ function readVersion(projectPath, stage, type) {
     let stageDir = stage;
     if (stage === 'merge' && type === 'feature') stageDir = 'dev';
     
-    const relativePath = type === 'feature' ? stageDir : path.join('core', stageDir);
+    const relativePath = type === 'feature' ? path.join('pipeline', 'feature', stageDir) : path.join('pipeline', 'core', stageDir);
     const versionFile = path.join(projectPath, relativePath, 'VERSION');
     
     try {
@@ -152,7 +152,7 @@ function readVersion(projectPath, stage, type) {
 
 // Helper to read feature manifest
 function readManifest(projectPath) {
-    const manifestFile = path.join(projectPath, 'core', 'merge', 'FEATURES_MERGED.json');
+    const manifestFile = path.join(projectPath, 'pipeline', 'core', 'merge', 'FEATURES_MERGED.json');
     try {
         if (fs.existsSync(manifestFile)) {
             const raw = fs.readFileSync(manifestFile, 'utf8');
@@ -187,15 +187,15 @@ app.get('/api/environments', async (req, res) => {
             const mergePort = parseInt(`${tier}13`, 10);
 
             const projectName = path.basename(projectPath);
-            const isFeature = projectPath.toLowerCase().includes('features');
+            const isFeature = projectPath.toLowerCase().includes(path.sep + 'feature' + path.sep) || projectPath.toLowerCase().endsWith(path.sep + 'feature');
             let parentProject = null;
             
             if (isFeature) {
                 const normalized = projectPath.replace(/\\/g, '/');
                 const parts = normalized.split('/');
-                const featIdx = parts.lastIndexOf('features');
-                if (featIdx > 0) {
-                    parentProject = parts[featIdx - 1];
+                const featIdx = parts.lastIndexOf('feature');
+                if (featIdx > 1) { // pipeline/feature/name -> idx 1 is 'feature'
+                    parentProject = parts[featIdx - 2]; // Project Root is 2 above 'feature'
                 }
             }
 

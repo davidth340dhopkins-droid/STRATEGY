@@ -1,9 +1,18 @@
 # .nurse/scripts/version-status.ps1
 # Shows the current version deployed at each pipeline stage.
 
-$nurseryDir = $PSScriptRoot | Split-Path -Parent
-$nurseRootDir = $nurseryDir | Split-Path -Parent
-$sproutDir  = $nurseRootDir | Split-Path -Parent
+# 1. Robust Project Root Discovery
+$current = $PSScriptRoot
+$projectRoot = $null
+while ($current) {
+    if (Test-Path (Join-Path $current ".initialized")) { $projectRoot = $current; break }
+    $parent = Split-Path $current -Parent
+    if ($parent -eq $current) { break }
+    $current = $parent
+}
+if ($null -eq $projectRoot) { $projectRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent | Split-Path -Parent }
+
+$pipelineDir = Join-Path $projectRoot "pipeline"
 
 $stages = @(
     @{ Name = "merge";  Dir = "core/merge"  },
@@ -18,7 +27,7 @@ Write-Host ("{0,-10} {1,-12} {2,-22} {3}" -f "Stage", "Version", "Latest Tag", "
 Write-Host ("{0,-10} {1,-12} {2,-22} {3}" -f "-----", "-------", "----------", "-----------") -ForegroundColor DarkGray
 
 foreach ($stage in $stages) {
-    $stagePath = Join-Path $sproutDir $stage.Dir
+    $stagePath = Join-Path $pipelineDir $stage.Dir
 
     if (-not (Test-Path $stagePath)) {
         Write-Host ("{0,-10} {1}" -f $stage.Name, "(not found)") -ForegroundColor DarkGray

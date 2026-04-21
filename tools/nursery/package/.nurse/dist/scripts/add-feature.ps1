@@ -3,14 +3,32 @@ param(
     [string]$Name
 )
 
-$nurseryDir = $PSScriptRoot | Split-Path -Parent
-$nurseRootDir = $nurseryDir | Split-Path -Parent
-$rootDir = $nurseRootDir | Split-Path -Parent
-$featuresDir = Join-Path $rootDir "features"
-$targetDir = Join-Path $featuresDir $Name
+# 1. Robust Project Root Discovery
+# Look upwards for the .initialized sentinel to find the TRUE project root.
+$current = $PSScriptRoot
+$projectRoot = $null
+while ($current) {
+    if (Test-Path (Join-Path $current ".initialized")) {
+        $projectRoot = $current
+        break
+    }
+    $parent = Split-Path $current -Parent
+    if ($parent -eq $current) { break }
+    $current = $parent
+}
 
-if (-not (Test-Path $featuresDir)) {
-    New-Item -ItemType Directory -Path $featuresDir -Force | Out-Null
+# Fallback to climbing if sentinel is missing (e.g. initial setup)
+if ($null -eq $projectRoot) {
+    # .nurse/dist/scripts/add-feature.ps1 -> climb 3
+    $projectRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent | Split-Path -Parent
+}
+
+$pipelineDir = Join-Path $projectRoot "pipeline"
+$featureBaseDir = Join-Path $pipelineDir "feature"
+$targetDir = Join-Path $featureBaseDir $Name
+
+if (-not (Test-Path $featureBaseDir)) {
+    New-Item -ItemType Directory -Path $featureBaseDir -Force | Out-Null
 }
 
 if (Test-Path $targetDir) {
@@ -20,17 +38,20 @@ if (Test-Path $targetDir) {
 
 Write-Host "Sprouting feature: $Name..." -ForegroundColor Cyan
 
-# 1. Create target directory
+# 2. Create target directory
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
-# 2. Copy .nurse/dist and .nurse/init.ps1 (exclude project state)
+# 3. Copy .nurse/dist and .nurse/init.ps1 (exclude project state)
 $featureNurse = New-Item -ItemType Directory -Path (Join-Path $targetDir ".nurse") -Force
-Copy-Item -Path $nurseryDir -Destination $featureNurse -Recurse -Force
-Copy-Item -Path (Join-Path $nurseRootDir "init.ps1") -Destination $featureNurse -Force
+$distDir = Join-Path ($PSScriptRoot | Split-Path -Parent) "dist"
+$initScript = Join-Path ($PSScriptRoot | Split-Path -Parent | Split-Path -Parent) "init.ps1"
 
-# 3. Initialize the feature pipeline
+Copy-Item -Path $distDir -Destination $featureNurse -Recurse -Force
+Copy-Item -Path $initScript -Destination $featureNurse -Force
+
+# 4. Initialize the feature pipeline
 $buildScript = Join-Path $featureNurse "dist/scripts/build-pipeline.ps1"
-$runCmdFile = Join-Path $nurseRootDir ".runcmd"
+$runCmdFile = Join-Path (Join-Path $projectRoot ".nurse") ".runcmd"
 $runCommand = Get-Content $runCmdFile -Raw
 
 if (Test-Path $buildScript) {
@@ -43,14 +64,11 @@ if (Test-Path $buildScript) {
     }
 }
 
-# 4. Initialize VERSION file
-$coreVersionFile = Join-Path $rootDir "core/merge/VERSION"
+# 5. Initialize VERSION file
+$coreVersionFile = Join-Path $pipelineDir "core/merge/VERSION"
 $coreVersion = if (Test-Path $coreVersionFile) { (Get-Content $coreVersionFile -Raw).Trim() } else { "0.1.0" }
 $featureVersion = "$coreVersion-$Name.0"
 
-# Find all environment worktrees created by build-pipeline.ps1 and set their version
-# Since build-pipeline hasn't run yet in the new target, we'll let it handle the first VERSION file creation.
-# Or better, we set it here in the source so build-pipeline picks it up.
 Set-Content -Path (Join-Path $targetDir "VERSION") -Value $featureVersion -Encoding UTF8
 
 Write-Host "Feature '$Name' (v$featureVersion) is now active." -ForegroundColor Green

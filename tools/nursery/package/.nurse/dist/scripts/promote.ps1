@@ -14,12 +14,22 @@ param(
     [string]$Bump = "patch"
 )
 
-$nurseryDir = $PSScriptRoot | Split-Path -Parent
-$nurseRootDir = $nurseryDir | Split-Path -Parent
-$sproutDir  = $nurseRootDir | Split-Path -Parent
+# 1. Robust Project Root Discovery
+$current = $PSScriptRoot
+$projectRoot = $null
+while ($current) {
+    if (Test-Path (Join-Path $current ".initialized")) { $projectRoot = $current; break }
+    $parent = Split-Path $current -Parent
+    if ($parent -eq $current) { break }
+    $current = $parent
+}
+if ($null -eq $projectRoot) { $projectRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent | Split-Path -Parent }
+
+$nurseRootDir = Join-Path $projectRoot ".nurse"
+$pipelineDir  = Join-Path $projectRoot "pipeline"
 
 # Determine if we're in a feature context
-$isFeature = $nurseRootDir -match "features"
+$isFeature = $nurseRootDir -match "feature"
 
 # Mapping aliases
 if ($isFeature) {
@@ -47,16 +57,16 @@ if (-not $isFeature -and $From -ne "merge" -and -not $PSBoundParameters.Contains
 }
 
 if ($isFeatureToCore) {
-    $featureName = Split-Path $sproutDir -Leaf
-    $fromBranch = "features/$featureName/$From"
+    $featureRoot = $nurseRootDir | Split-Path -Parent
+    $featureName = Split-Path $featureRoot -Leaf
+    $fromBranch = "feature/$featureName/$From"
     $toBranch   = "core/merge"
 } elseif ($isFeature) {
-    # Feature branches are prefixed with features/name/
-    $featureName = Split-Path $sproutDir -Leaf
-    $fromBranch = "features/$featureName/$From"
-    $toBranch   = "features/$featureName/$To"
+    $featureRoot = $nurseRootDir | Split-Path -Parent
+    $featureName = Split-Path $featureRoot -Leaf
+    $fromBranch = "feature/$featureName/$From"
+    $toBranch   = "feature/$featureName/$To"
 } else {
-    # Core branches are prefixed with core/
     $fromBranch = "core/$From"
     $toBranch   = "core/$To"
 }
@@ -72,15 +82,16 @@ $fromDir = Get-StageDir -stage $From -isFeatureEnv $isFeature
 $toDir   = Get-StageDir -stage $To -isFeatureEnv ($isFeature -and -not $isFeatureToCore)
 
 if ($isFeatureToCore) {
-    $rootSproutDir = Split-Path (Split-Path $sproutDir -Parent) -Parent
-    $fromPath = Join-Path $sproutDir $fromDir
-    $toPath   = Join-Path $rootSproutDir (Join-Path "core" $toDir)
+    $featureRoot = $nurseRootDir | Split-Path -Parent
+    $fromPath = Join-Path $featureRoot $fromDir
+    $toPath   = Join-Path $pipelineDir (Join-Path "core" $toDir)
 } elseif ($isFeature) {
-    $fromPath = Join-Path $sproutDir $fromDir
-    $toPath   = Join-Path $sproutDir $toDir
+    $featureRoot = $nurseRootDir | Split-Path -Parent
+    $fromPath = Join-Path $featureRoot $fromDir
+    $toPath   = Join-Path $featureRoot $toDir
 } else {
-    $fromPath = Join-Path $sproutDir (Join-Path "core" $fromDir)
-    $toPath   = Join-Path $sproutDir (Join-Path "core" $toDir)
+    $fromPath = Join-Path $pipelineDir (Join-Path "core" $fromDir)
+    $toPath   = Join-Path $pipelineDir (Join-Path "core" $toDir)
 }
 
 Write-Host "Context: $($isFeature ? 'Feature' : 'Core')" -ForegroundColor Gray
@@ -193,6 +204,8 @@ try {
             $mergedList = @($rawJson | ConvertFrom-Json)
         }
         
+        $featureRoot = $nurseRootDir | Split-Path -Parent
+        $featureName = Split-Path $featureRoot -Leaf
         $existing = $mergedList | Where-Object { $_.name -eq $featureName }
         if ($existing) {
             $existing.version = $featureVersionStr

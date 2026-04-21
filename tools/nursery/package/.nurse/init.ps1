@@ -23,7 +23,7 @@ git commit -m "chore: initial sprout generation" | Out-Null
 
 Write-Host "Git repository initialized." -ForegroundColor Green
 
-# 4. Create core/stable worktree upfront so the user can develop the app
+# 4. Create pipeline/core/stable worktree upfront so the user can develop the app
 # We use an orphan branch so it does not inherit `.nurse` or the initial repo history.
 git checkout --orphan core/stable | Out-Null
 git rm -rf . | Out-Null
@@ -37,9 +37,10 @@ git commit -m "chore: initialize core/stable at v0.1.0" | Out-Null
 git tag "v0.1.0" | Out-Null
 git checkout master | Out-Null
 
-git worktree add core/stable core/stable | Out-Null
+if (-not (Test-Path "pipeline/core")) { New-Item -ItemType Directory -Path "pipeline/core" -Force | Out-Null }
+git worktree add pipeline/core/stable core/stable | Out-Null
 
-Write-Host "Created clean 'core/stable' worktree." -ForegroundColor Cyan
+Write-Host "Created clean 'pipeline/core/stable' worktree." -ForegroundColor Cyan
 
 # 5. Generate README-FIRST.md
 $readmeContent = @"
@@ -49,11 +50,11 @@ Welcome to your new Sprout project!
 
 To properly establish your multi-tiered continuous deployment pipeline, follow these steps:
 
-## Step 1: Initialize Your App in \`core/stable\`
-Navigate into the **\`core/stable/\`** directory and build your application there. 
-For example, run your \`npx create-vite\` or \`npx create-next-app\` command INSIDE \`core/stable/\`. Everything that makes up your application should be built inside that folder so it propagates correctly.
+## Step 1: Initialize Your App in \`pipeline/core/stable\`
+Navigate into the **\`pipeline/core/stable/\`** directory and build your application there. 
+For example, run your \`npx create-vite\` or \`npx create-next-app\` command INSIDE \`pipeline/core/stable/\`. Everything that makes up your application should be built inside that folder so it propagates correctly.
 
-*Note: You MUST commit your changes inside \`core/stable/\` before proceeding to Step 2.*
+*Note: You MUST commit your changes inside \`pipeline/core/stable/\` before proceeding to Step 2.*
 
 ## Step 2: Build the DevOps Pipeline
 Once your application serves correctly (e.g. you know the command to run it locally), return to the Root directory and launch the pipeline builder:
@@ -64,7 +65,7 @@ pwsh .nurse/dist/scripts/build-pipeline.ps1 -RunCommand "your server command e.g
 
 *(Be sure to include \`{PORT}\` exactly where your framework expects a port number).*
 
-This script will read your \`core/stable\` codebase and map out the remaining independent environments (\`core/merge\`, \`core/a-test\`, \`core/b-test\`)!
+This script will read your \`pipeline/core/stable\` codebase and map out the remaining independent environments (\`pipeline/core/merge\`, \`pipeline/core/a-test\`, \`pipeline/core/b-test\`)!
 "@
 
 Set-Content -Path "README-FIRST.md" -Value $readmeContent -Encoding UTF8

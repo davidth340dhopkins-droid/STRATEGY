@@ -6,10 +6,21 @@ param(
     [string]$Target = "core"
 )
 
-$nurseryDir = $PSScriptRoot | Split-Path -Parent
-$nurseRootDir = $nurseryDir | Split-Path -Parent
-$rootDir = $nurseRootDir | Split-Path -Parent
-$tierFile = Join-Path $nurseRootDir ".porttier"
+# 1. Robust Project Root Discovery
+$current = $PSScriptRoot
+$projectRoot = $null
+while ($current) {
+    if (Test-Path (Join-Path $current ".initialized")) { $projectRoot = $current; break }
+    $parent = Split-Path $current -Parent
+    if ($parent -eq $current) { break }
+    $current = $parent
+}
+if ($null -eq $projectRoot) { $projectRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent | Split-Path -Parent }
+
+# Find the local root (ProjectRoot or FeatureRoot)
+$localNurseRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent
+$localRoot = $localNurseRoot | Split-Path -Parent
+$tierFile = Join-Path $localNurseRoot ".porttier"
 
 if (-not (Test-Path $tierFile)) {
     Write-Host "No .porttier found. Skipping graceful stop." -ForegroundColor Gray

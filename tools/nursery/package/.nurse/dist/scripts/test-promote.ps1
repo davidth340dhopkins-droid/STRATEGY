@@ -1,18 +1,28 @@
 # .nurse/scripts/test-promote.ps1
 # Simple utility to increment the version of the primary development workspace.
 
-$nurseryDir = $PSScriptRoot | Split-Path -Parent
-$nurseRootDir = $nurseryDir | Split-Path -Parent
-$sproutDir  = $nurseRootDir | Split-Path -Parent
-$isFeature  = $nurseRootDir -match "features"
+# 1. Robust Project Root Discovery
+$current = $PSScriptRoot
+$projectRoot = $null
+while ($current) {
+    if (Test-Path (Join-Path $current ".initialized")) { $projectRoot = $current; break }
+    $parent = Split-Path $current -Parent
+    if ($parent -eq $current) { break }
+    $current = $parent
+}
+if ($null -eq $projectRoot) { $projectRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent | Split-Path -Parent }
+
+$localNurseRoot = $PSScriptRoot | Split-Path -Parent | Split-Path -Parent
+$isFeature  = $localNurseRoot -match "feature"
+$localRoot  = $localNurseRoot | Split-Path -Parent
 
 # The "first" environment where development happens
-$targetDir  = if ($isFeature) { "dev" } else { "core/merge" }
-$versionFile = Join-Path $sproutDir (Join-Path $targetDir "VERSION")
+$targetDir  = if ($isFeature) { "dev" } else { "pipeline/core/merge" }
+$versionFile = Join-Path $localRoot (Join-Path $targetDir "VERSION")
 
 if (-not (Test-Path $versionFile)) {
     # If dev doesn't exist yet, try finding any stage VERSION or use the root one
-    $versionFile = Join-Path $sproutDir "VERSION"
+    $versionFile = Join-Path $localRoot "VERSION"
 }
 
 if (-not (Test-Path $versionFile)) {
