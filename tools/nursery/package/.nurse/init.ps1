@@ -2,8 +2,9 @@
 # This script runs once immediately after a sprout directory is created and the package is copied.
 # Its primary purpose is to establish the isolated initial git repository structure.
 
-$nurseryDir = $PSScriptRoot
-$sentinelFile = Join-Path $nurseryDir ".initialized"
+$nurseRootDir = $PSScriptRoot
+$projectRoot = Split-Path $nurseRootDir -Parent
+$sentinelFile = Join-Path $projectRoot ".initialized"
 
 if (Test-Path $sentinelFile) {
     Write-Host "This sprout is already initialized. Skipping init.ps1." -ForegroundColor Yellow

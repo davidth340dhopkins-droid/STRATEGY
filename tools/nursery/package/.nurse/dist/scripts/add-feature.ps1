@@ -43,8 +43,8 @@ New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 
 # 3. Copy .nurse/dist and .nurse/init.ps1 (exclude project state)
 $featureNurse = New-Item -ItemType Directory -Path (Join-Path $targetDir ".nurse") -Force
-$distDir = Join-Path ($PSScriptRoot | Split-Path -Parent) "dist"
-$initScript = Join-Path ($PSScriptRoot | Split-Path -Parent | Split-Path -Parent) "init.ps1"
+$distDir = $PSScriptRoot | Split-Path -Parent
+$initScript = Join-Path (Split-Path $distDir -Parent) "init.ps1"
 
 Copy-Item -Path $distDir -Destination $featureNurse -Recurse -Force
 Copy-Item -Path $initScript -Destination $featureNurse -Force

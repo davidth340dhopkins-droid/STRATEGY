@@ -10,6 +10,13 @@ $seedPath = Join-Path $strategyRoot "entities\seeds\_testsprout.md"
 $sproutDir = Join-Path $strategyRoot "entities\sprouts\testsprout"
 
 Write-Host "--- PHASE 0: Cleaning Global State ---" -ForegroundColor Cyan
+
+# Use the Nuclear Scavenger to ensure a clean state
+$scavengeScript = Join-Path $strategyRoot "tools\nursery\scripts\scavenge.ps1"
+if (Test-Path $scavengeScript) {
+    pwsh $scavengeScript
+}
+
 if (Test-Path $sproutDir) {
     Write-Host "Found existing testsprout. Unsprouting..." -ForegroundColor Gray
     if ($Kill) {
@@ -49,8 +56,8 @@ if (-not (Test-Path $sproutDir)) {
     Pop-Location; exit 1
 }
 
-Write-Host "`n--- PHASE 3: Simulating App Setup in core/stable ---" -ForegroundColor Cyan
-$coreStableDir = Join-Path $sproutDir "core\stable"
+Write-Host "`n--- PHASE 3: Simulating App Setup in pipeline/core/stable ---" -ForegroundColor Cyan
+$coreStableDir = Join-Path $sproutDir "pipeline\core\stable"
 
 $serverContent = @'
 const http = require('http');
@@ -70,7 +77,7 @@ const server = http.createServer((req, res) => {
     let envVersion = "Unknown";
 
     try {
-        nurseryVersion = fs.readFileSync(path.join(__dirname, '../../.nurse/VERSION'), 'utf8').trim();
+        nurseryVersion = fs.readFileSync(path.join(__dirname, '../../../.nurse/VERSION'), 'utf8').trim();
         envVersion = fs.readFileSync(path.join(__dirname, 'VERSION'), 'utf8').trim();
     } catch (e) {
         console.error("Version read failed:", e.message);
@@ -112,12 +119,12 @@ Pop-Location
 
 Write-Host "`n--- PHASE 4: Automatically Running Pipeline Builder ---" -ForegroundColor Cyan
 Push-Location $sproutDir
-pwsh .nurse/scripts/build-pipeline.ps1 -RunCommand "node server.js --port {PORT}"
+pwsh .nurse/dist/scripts/build-pipeline.ps1 -RunCommand "node server.js --port {PORT}"
 Pop-Location
 
 Write-Host "`n--- TEST SPROUT COMPLETE! ---" -ForegroundColor Green
 Write-Host "A clean NodeJS server is mapped across all four pipeline branches." -ForegroundColor Gray
 Write-Host "To boot the 4 dynamic port servers, run:" -ForegroundColor Yellow
-Write-Host "pwsh entities/sprouts/testsprout/.nurse/scripts/start-servers.ps1" -ForegroundColor Yellow
+Write-Host "pwsh entities/sprouts/testsprout/.nurse/dist/scripts/start-servers.ps1" -ForegroundColor Yellow
 
 Pop-Location

@@ -77,7 +77,7 @@ try {
     }
 
     # 1. Gracefully stop servers if the script exists
-    $stopScript = Join-Path $sproutDir.FullName ".nurse\scripts\stop-servers.ps1"
+    $stopScript = Join-Path $sproutDir.FullName ".nurse\dist\scripts\stop-servers.ps1"
     if (Test-Path $stopScript) {
         Write-Host "Executing project stop-servers.ps1..." -ForegroundColor Gray
         pwsh $stopScript
@@ -86,7 +86,13 @@ try {
     # 2. Aggressively kill ANY remaining process that has this folder in its command line (e.g. background shells)
     # ONLY if the user specifically asked to -Kill
     if ($Kill) {
-        Write-Host "Scanning for background shells or locked processes..." -ForegroundColor Gray
+        Write-Host "Invoking Global Scavenger..." -ForegroundColor Gray
+        $scavengeScript = Join-Path $strategyRoot "tools\nursery\scripts\scavenge.ps1"
+        if (Test-Path $scavengeScript) {
+            pwsh $scavengeScript
+        }
+        
+        Write-Host "Scanning for background shells or locked processes for THIS sprout..." -ForegroundColor Gray
         $escapedRoot = [regex]::Escape($sproutDir.FullName)
         $processes = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match $escapedRoot }
         foreach ($proc in $processes) {
