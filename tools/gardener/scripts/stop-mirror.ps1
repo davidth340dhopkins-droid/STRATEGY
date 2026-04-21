@@ -1,4 +1,4 @@
-# stop-dashboard.ps1
+# stop-mirror.ps1
 # Stops the live Entity Database Explorer running on port 8080.
 
 Write-Host "--- Stopping Entity Explorer ---" -ForegroundColor Cyan
@@ -10,7 +10,7 @@ try {
         if ($conn -and $conn.OwningProcess) {
             $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $($conn.OwningProcess)"
             if ($proc -and $proc.CommandLine -match "node") {
-                Write-Host "Found Dashboard process (PID: $($conn.OwningProcess)). Terminating..." -ForegroundColor Yellow
+                Write-Host "Found Mirror process (PID: $($conn.OwningProcess)). Terminating..." -ForegroundColor Yellow
                 Stop-Process -Id $conn.OwningProcess -Force
                 $procsFound = $true
                 Start-Sleep -Seconds 1
@@ -22,7 +22,7 @@ try {
 }
 
 if (-not $procsFound) {
-    Write-Host "No active dashboard process found on port 8080." -ForegroundColor Gray
+    Write-Host "No active mirror process found on port 8080." -ForegroundColor Gray
 } else {
-    Write-Host "Dashboard stopped successfully." -ForegroundColor Green
+    Write-Host "Mirror stopped successfully." -ForegroundColor Green
 }

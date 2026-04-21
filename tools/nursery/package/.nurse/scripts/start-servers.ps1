@@ -105,16 +105,33 @@ try {
         }
     }
 
-    # Find tier for this project or next available
-    $xx = 30
-    $foundFreeTier = $false
-    # First, check if we already have an assignment
+    # --- GLOBAL PRUNE: Clean up ANY existing tiers for this project root ---
+    $oldTiers = @()
     foreach ($key in $registryData.Keys) {
         if ($registryData[$key] -eq $rootDir) {
-            $xx = [int]$key
-            break
+            $oldTiers += $key
         }
     }
+
+    if ($oldTiers.Count -gt 0) {
+        Write-Host "Cleaning up $($oldTiers.Count) existing assignments for this project..." -ForegroundColor Yellow
+        foreach ($t in $oldTiers) {
+            $tNum = [int]$t
+            10..13 | ForEach-Object {
+                $p = [int]($t.ToString() + $_.ToString())
+                $owner = Get-PortOwnerPath -port $p
+                if ($null -ne $owner) {
+                    Write-Host "Killing old process on port $p..." -ForegroundColor Gray
+                    Stop-PortOwner -port $p
+                }
+            }
+            $registryData.Remove($t)
+        }
+    }
+
+    # Now, assign a fresh tier
+    $xx = 30
+    $foundFreeTier = $false
 
     Write-Host "Scanning for available port tier starting at $xx..." -ForegroundColor Gray
     while (-not $foundFreeTier -and $xx -le 655) {
@@ -190,22 +207,24 @@ if (-not $isFeature) {
     $environments += @{ Name = "core/merge";  Port = [int]"${xx}${y}3" }
 } else {
     $featureName = Split-Path (Split-Path $nurseryDir -Parent) -Leaf
-    $environments += @{ Name = "features/$featureName/b-test"; Port = [int]"${xx}${y}1" }
-    $environments += @{ Name = "features/$featureName/a-test"; Port = [int]"${xx}${y}2" }
-    $environments += @{ Name = "features/$featureName/merge";  Port = [int]"${xx}${y}3" }
+    $environments += @{ Name = "b-test"; Port = [int]"${xx}${y}1" }
+    $environments += @{ Name = "a-test"; Port = [int]"${xx}${y}2" }
+    $environments += @{ Name = "dev";    Port = [int]"${xx}${y}3" }
 }
 
 foreach ($env in $environments) {
     $worktreePath = Join-Path $rootDir $env.Name
     if (Test-Path $worktreePath) {
+        # Start the server using the shell execution path for maximum compatibility and logging
+        $logFile = Join-Path $worktreePath "server.log"
         $port = $env.Port
         $cmdToRun = $runCmdTemplate -replace "\{PORT\}", "$port"
-        $logFile = Join-Path $worktreePath "server.log"
         Write-Host "Starting $($env.Name) on port $port... " -ForegroundColor Magenta
         
+        # We use absolute paths and explicit redirection to capture ALL errors
         Start-Process pwsh -ArgumentList "-NonInteractive", "-Command", "cd '$worktreePath'; $cmdToRun *>> '$logFile'" -WindowStyle Hidden
     } else {
-        Write-Host "Worktree $($env.Name) not found. Skipping." -ForegroundColor Yellow
+        Write-Host "Worktree $($env.Name) ($worktreePath) not found. Skipping." -ForegroundColor Yellow
     }
 }
 

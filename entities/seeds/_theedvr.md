@@ -130,52 +130,52 @@ children: ""
 
 # TheedVR
 
-> __No tagline.__ __No slogan.__
+> _<!-- No tagline specified -->_ _<!-- No slogan specified -->_
 
-> **Parent:** _No parent._ · Business · _No category._ · theedvr
+> **Parent:** <!-- No parent specified --> · Business · <!-- No category specified --> · theedvr
 
-> **Children:** _No children._
+> **Children:** <!-- No children specified -->
 
 ---
 
 ## Overview
 
-_No description._
+<!-- No description specified -->
 
 ## Trends
 
-### First Trend: _No first_trend_title._
-> _No first_trend_description._
-> **Reference:** _No first_trend_reference._
+### First Trend: <!-- No first_trend_title specified -->
+> <!-- No first_trend_description specified -->
+> **Reference:** <!-- No first_trend_reference specified -->
 
-### Second Trend: _No second_trend_title._
-> _No second_trend_description._
-> **Reference:** _No second_trend_reference._
+### Second Trend: <!-- No second_trend_title specified -->
+> <!-- No second_trend_description specified -->
+> **Reference:** <!-- No second_trend_reference specified -->
 
-### Third Trend: _No third_trend_title._
-> _No third_trend_description._
-> **Reference:** _No third_trend_reference._
+### Third Trend: <!-- No third_trend_title specified -->
+> <!-- No third_trend_description specified -->
+> **Reference:** <!-- No third_trend_reference specified -->
 
 #### Other Trends & Notes
-_No trend_notes._
+<!-- No trend_notes specified -->
 
 ## Benefits
 
-### First Benefit: _No first_benefit_title._
-> _No first_benefit_description._
-> **Reference:** _No first_benefit_reference._
+### First Benefit: <!-- No first_benefit_title specified -->
+> <!-- No first_benefit_description specified -->
+> **Reference:** <!-- No first_benefit_reference specified -->
 
-### Second Benefit: _No second_benefit_title._
-> _No second_benefit_description._
-> **Reference:** _No second_benefit_reference._
+### Second Benefit: <!-- No second_benefit_title specified -->
+> <!-- No second_benefit_description specified -->
+> **Reference:** <!-- No second_benefit_reference specified -->
 
-### Third Benefit: _No third_benefit_title._
-> _No third_benefit_description._
-> **Reference:** _No third_benefit_reference._
+### Third Benefit: <!-- No third_benefit_title specified -->
+> <!-- No third_benefit_description specified -->
+> **Reference:** <!-- No third_benefit_reference specified -->
 
 #### Other Benefits & Notes
-_No benefit_notes._
+<!-- No benefit_notes specified -->
 
 ## Notes
 
-_No notes._
+<!-- No notes specified -->

@@ -5,38 +5,42 @@ param(
     [switch]$NoStart
 )
 
-Write-Host "Configuring Core Pipeline..." -ForegroundColor Cyan
-
-# 1. Ensure config file paths are correct to the isolated .nurse setup
 $nurseryDir = $PSScriptRoot | Split-Path -Parent
+if ($null -eq $RunCommand -or $RunCommand -eq "") {
+    $RunCommand = "node server.js --port {PORT}"
+}
 $runCmdFile = Join-Path $nurseryDir ".runcmd"
-
 Set-Content -Path $runCmdFile -Value $RunCommand -Encoding UTF8
 
-# 2. Branch creation and Worktree creation
 $isFeature = $nurseryDir -match "features"
-$environments = if (-not $isFeature) {
-    @("core/stable", "core/b-test", "core/a-test", "core/merge")
+if (-not $isFeature) {
+    Write-Host "Configuring Core Pipeline..." -ForegroundColor Cyan
+    $environments = @("core/stable", "core/b-test", "core/a-test", "core/merge")
 } else {
     $featureName = Split-Path (Split-Path $nurseryDir -Parent) -Leaf
-    @("features/$featureName/b-test", "features/$featureName/a-test", "features/$featureName/merge")
+    Write-Host "Configuring Feature Pipeline: $featureName..." -ForegroundColor Cyan
+    # Flat directory structure for features
+    $environments = @("b-test", "a-test", "dev")
 }
 
 foreach ($env in $environments) {
-    Write-Host "Creating worktree for $env..." -ForegroundColor Gray
+    $branch = $env
+    # For features, we map internal names to the full branch paths
+    if ($isFeature) {
+        if ($env -eq "dev") { $branch = "features/$featureName/merge" }
+        else { $branch = "features/$featureName/$env" }
+    }
+
+    Write-Host "Creating worktree for $env (branch: $branch)..." -ForegroundColor Gray
     
-    $branchExists = git branch --list $env
+    $branchExists = git branch --list $branch
     if (-not $branchExists) {
         $sourceBranch = if ($isFeature) { "core/merge" } else { "master" }
-        if ($env -match "stable$") {
-             # Core stable is special
-        } else {
-            git branch $env $sourceBranch | Out-Null
-        }
+        git branch $branch $sourceBranch | Out-Null
     }
     
     if (-not (Test-Path $env)) {
-        git worktree add $env $env | Out-Null
+        git worktree add $env $branch | Out-Null
     } else {
         Write-Host "Worktree directory $env already exists. Skipping." -ForegroundColor Yellow
     }
